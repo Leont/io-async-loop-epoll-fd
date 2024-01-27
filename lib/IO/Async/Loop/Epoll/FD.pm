@@ -128,3 +128,15 @@ sub unwatch_process {
 1;
 
 # ABSTRACT: Use IO::Async with Epoll and special filehandles
+
+=head1 DESCRIPTION
+
+This is a Linux specific backend for L<IO::Async|IO::Async>. Unlike L<IO::Async::Loop::Epoll|IO::Async::Loop::Epoll>, this will use signalfd for signal handling, timerfd for timer handling and pidfd for process handling.
+
+=head1 SEE ALSO
+
+=over 4
+
+=item * L<IO::Async::Loop::Epoll|IO::Async::Loop::Epoll>
+
+=back
