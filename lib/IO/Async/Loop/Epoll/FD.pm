@@ -13,6 +13,13 @@ use Signal::Mask;
 
 use constant _CAN_WATCH_ALL_PIDS => 0;
 
+sub new {
+	my ($class, @args) = @_;
+	my $self = $class->SUPER::new(@args);
+	$self->{sigmask} = undef;
+	return $self;
+}
+
 sub watch_signal {
 	my ($self, $signal, $code) = @_;
 

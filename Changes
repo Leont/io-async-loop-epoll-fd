@@ -2,6 +2,7 @@ Revision history for IO-Async-Loop-Epoll-FD
 
 {{$NEXT}}
           - Correctly unwatch handlers
+          - Don't change sigmask during epoll_pwait
 
 0.001     2024-01-27 17:44:34+01:00 Europe/Brussels
           Initial release to an unsuspecting world
