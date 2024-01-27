@@ -7,7 +7,8 @@ use parent 'IO::Async::Loop::Epoll';
 
 use Carp 'croak';
 use Linux::FD qw/timerfd signalfd/;
-use Scalar::Util 'refaddr';
+use Linux::FD::Pid;
+use Scalar::Util qw/refaddr weaken/;
 use Signal::Mask;
 
 use constant _CAN_WATCH_ALL_PIDS => 0;
@@ -89,6 +90,39 @@ sub unwatch_time {
 	my ($self, $id) = @_;
 	my $fh = delete $self->{watch_time}{$id};
 	$self->unwatch_io(handle => $fh);
+}
+
+sub watch_process {
+	my ($self, $process, $code) = @_;
+
+	$code or croak "Expected 'code' as CODE ref";
+
+	my $backref = $self;
+	weaken $backref;
+	my $callback = sub {
+		if (my $pair = $backref->{watch_process}{$process}) {
+			my ($fh, $code) = @{$pair};
+			if (my $status = $fh->wait) {
+				$code->($process, $status);
+				$backref->unwatch_process($process);
+			}
+		}
+	};
+
+	my $fh = Linux::FD::Pid->new($process, 'non-blocking');
+	$Signal::Mask{CHLD} ||= 1;
+	$self->watch_io(handle => $fh, on_read_ready => $callback);
+
+	$self->{watch_process}{$process} = [ $fh, $code ];
+	return $process;
+}
+
+sub unwatch_process {
+	my ($self, $id) = @_;
+	if (my $pair = delete $self->{watch_process}{$id}) {
+		$self->unwatch_io(handle => $pair->[0]);
+		$Signal::Mask{CHLD} = 0 if not keys %{ $self->{watch_process} };
+	}
 }
 
 1;
