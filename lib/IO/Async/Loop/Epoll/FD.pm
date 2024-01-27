@@ -6,8 +6,46 @@ use warnings;
 use parent 'IO::Async::Loop::Epoll';
 
 use Carp 'croak';
-use Linux::FD qw/timerfd/;
+use Linux::FD qw/timerfd signalfd/;
 use Scalar::Util 'refaddr';
+use Signal::Mask;
+
+use constant _CAN_WATCH_ALL_PIDS => 0;
+
+sub watch_signal {
+	my ($self, $signal, $code) = @_;
+
+	$code or croak "Expected 'code' as CODE ref";
+
+	my $watch_signal = $self->{watch_signal} //= {};
+	my $callback = sub {
+		if (my $pair = $watch_signal->{$signal}) {
+			my ($fh, $code) = @{$pair};
+			while (my $info = $fh->receive) {
+				$code->($info->{signo});
+			}
+		}
+	};
+
+	my $fh = signalfd($signal, 'non-blocking');
+	$Signal::Mask{$signal} = !!1;
+	$self->watch_io(handle => $fh, on_read_ready => $callback);
+
+	$self->{watch_signal}{$signal} = [ $fh, $code ];
+	return $signal;
+}
+
+sub unwatch_signal {
+	my ($self, $id) = @_;
+	if (my $pair = delete $self->{watch_signal}{$id}) {
+		$self->unwatch_io(handle => $pair->[0]);
+		$Signal::Mask{$id} = !!0;
+	}
+}
+
+# This is crucial to prevent the default implementation from mucking around with signals
+sub post_fork {
+}
 
 sub watch_time {
 	my ($self, %params) = @_;
