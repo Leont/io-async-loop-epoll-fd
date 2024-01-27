@@ -51,8 +51,26 @@ sub unwatch_signal {
 	}
 }
 
-# This is crucial to prevent the default implementation from mucking around with signals
 sub post_fork {
+   my $self = shift;
+
+   $self->{epoll} = Linux::Epoll->new;
+   $self->{pid} = $$;
+
+   my $watches = $self->{iowatches} or return;
+
+   foreach my $watch ( values %$watches ) {
+      my ( $handle, $on_read_ready, $on_write_ready, $on_hangup ) = @$watch;
+      my $fd = $handle->fileno;
+      my $mask = $self->{masks}->{$fd};
+      my @bits;
+      push @bits, 'in'  if $mask & IO::Async::Loop::Epoll::WATCH_READ;
+      push @bits, 'out' if $mask & IO::Async::Loop::Epoll::WATCH_WRITE;
+      push @bits, 'hup' if $mask & IO::Async::Loop::Epoll::WATCH_HUP;
+      my $cb = $self->{callbacks}->{$fd};
+
+      $self->{epoll}->add($handle, \@bits, $cb);
+   }
 }
 
 sub watch_time {
