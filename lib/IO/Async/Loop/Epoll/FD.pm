@@ -6,8 +6,8 @@ use warnings;
 use parent 'IO::Async::Loop::Epoll';
 
 use Carp 'croak';
-use Linux::FD qw/timerfd signalfd/;
-use Linux::FD::Pid;
+use Linux::FD 0.015 qw/timerfd signalfd/;
+use Linux::FD::Pid 0.007;
 use Scalar::Util qw/refaddr weaken/;
 use Signal::Mask;
 
