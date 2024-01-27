@@ -37,10 +37,10 @@ sub watch_signal {
 }
 
 sub unwatch_signal {
-	my ($self, $id) = @_;
-	if (my $pair = delete $self->{watch_signal}{$id}) {
-		$self->unwatch_io(handle => $pair->[0]);
-		$Signal::Mask{$id} = !!0;
+	my ($self, $signal) = @_;
+	if (my $pair = delete $self->{watch_signal}{$signal}) {
+		$self->unwatch_io(handle => $pair->[0], on_read_ready => 1);
+		$Signal::Mask{$signal} = !!0;
 	}
 }
 
@@ -89,7 +89,7 @@ sub watch_time {
 sub unwatch_time {
 	my ($self, $id) = @_;
 	my $fh = delete $self->{watch_time}{$id};
-	$self->unwatch_io(handle => $fh);
+	$self->unwatch_io(handle => $fh, on_read_ready => 1);
 }
 
 sub watch_process {
@@ -120,7 +120,7 @@ sub watch_process {
 sub unwatch_process {
 	my ($self, $id) = @_;
 	if (my $pair = delete $self->{watch_process}{$id}) {
-		$self->unwatch_io(handle => $pair->[0]);
+		$self->unwatch_io(handle => $pair->[0], on_read_ready => 1);
 		$Signal::Mask{CHLD} = 0 if not keys %{ $self->{watch_process} };
 	}
 }
